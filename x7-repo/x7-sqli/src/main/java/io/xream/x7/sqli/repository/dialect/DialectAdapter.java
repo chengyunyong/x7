@@ -18,8 +18,6 @@ package io.xream.x7.sqli.repository.dialect;
 
 import io.xream.sqli.dialect.Dialect;
 import io.xream.sqli.dialect.DynamicDialect;
-import io.xream.sqli.repository.init.SqlInitFactory;
-import io.xream.sqli.starter.DbType;
 import io.xream.x7.base.util.StringUtil;
 import org.springframework.core.env.Environment;
 
@@ -27,29 +25,28 @@ import org.springframework.core.env.Environment;
  * @Author Sim
  */
 public interface DialectAdapter {
-    String MYSQL = "mysql";
+    String MYSQL = "mysql"; //mysql, oceanbase, tidb, presto ....
+    String IMPALA = "impala"; //upsert ,while mysql replace
     String CLICKHOUSE = "clickhouse";
-    String OCEANBASE = "oceanbase";
+    String POSTGRESQL = "postgresql";
     String ORACLE = "oracle";
+    //not support: db2, sqlserver, sybase,
 
     default Dialect adapter(String driverClassName) {
 
-        isSupported(driverClassName);
-
         try {
             Dialect dialect = null;
-            if (driverClassName.contains(MYSQL) || driverClassName.contains(OCEANBASE)) {
-                DbType.setValue(MYSQL);
-                dialect = (Dialect) Class.forName("io.xream.sqli.dialect.MySqlDialect").newInstance();
+            if (driverClassName.contains(POSTGRESQL)) {
+                dialect = (Dialect) Class.forName("io.xream.sqli.dialect.MySqlDialect").newInstance();//TODO , buildTableSql, upsert
+            }else if (driverClassName.contains(IMPALA)) {
+                dialect = (Dialect) Class.forName("io.xream.sqli.dialect.ImpalaDialect").newInstance();
             }else if (driverClassName.contains(CLICKHOUSE)) {
-                DbType.setValue(CLICKHOUSE);
                 dialect = (Dialect) Class.forName("io.xream.sqli.dialect.ClickhouseDialect").newInstance();
             }else if (driverClassName.contains(ORACLE)) {
-                DbType.setValue(ORACLE);
                 dialect = (Dialect) Class.forName("io.xream.sqli.dialect.OracleDialect").newInstance();
+            }else {
+                dialect = (Dialect) Class.forName("io.xream.sqli.dialect.MySqlDialect").newInstance();
             }
-
-            SqlInitFactory.DIALECT = dialect;
 
             DynamicDialect dynamicDialect = new DynamicDialect();
             dynamicDialect.setDefaultDialect(dialect);
@@ -63,12 +60,6 @@ public interface DialectAdapter {
         return null;
     }
 
-     static boolean isSupported(String driverClassName) {
-        return driverClassName.toLowerCase().contains(MYSQL)
-                ||driverClassName.toLowerCase().contains(CLICKHOUSE)
-                ||driverClassName.toLowerCase().contains(OCEANBASE)
-                || driverClassName.toLowerCase().contains(ORACLE);
-    }
 
     default String getDbDriverKey(Environment environment) {
         String driverClassName = null;

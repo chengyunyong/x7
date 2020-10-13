@@ -24,7 +24,6 @@ import static io.xream.sqli.builder.Direction.DESC;
 import static io.xream.sqli.builder.JoinType.INNER_JOIN;
 import static io.xream.sqli.builder.Op.GT;
 import static io.xream.sqli.builder.ReduceType.COUNT_DISTINCT;
-import static io.xream.sqli.builder.ReduceType.SUM;
 
 
 @RestController
@@ -122,7 +121,6 @@ public class XxxController {
     @RequestMapping("/refreshByCondition")
     public ViewEntity refreshByCondition() {
 
-
         boolean flag = this.catRepository.refresh(
                 RefreshCondition.build()
                         .refresh("testBoo", TestBoo.BOO)
@@ -130,7 +128,7 @@ public class XxxController {
                         .refresh("test = test - 3")
                         .refresh("createAt", System.currentTimeMillis())
                         .lt("createAt", 0)
-                        .in("id", Arrays.asList(247, 248))
+                        .in("id", Arrays.asList(247, 248,512))
 //                        .sourceScript("cat LEFT JOIN dogTest on dogTest.id = cat.dogId")
         );//必须带ID更新，没ID报错
 //		this.catRepository.refreshUnSafe(refreshCondition);//可以多条更新
@@ -140,15 +138,18 @@ public class XxxController {
     }
 
 
-    @RequestMapping("/distinct")
-    public ViewEntity distinct(@RequestBody CatRO ro) {
+    @RequestMapping("/resultKeyFuntion")
+    public ViewEntity resultKeyFuntion(@RequestBody CatRO ro) {
 
         CriteriaBuilder.ResultMapBuilder builder = CriteriaBuilder.resultMapBuilder();
         builder.resultWithDottedKey().distinct("catTest.dogId")
                 .distinct("catTest.catFriendName")
                 .reduce(COUNT_DISTINCT, "catTest.id")
-                .reduce(SUM, "dogTest.petId", Having.of(GT, 1)).groupBy("catTest.xxx")
-                .resultKeyFunction(ResultKeyAlia.of("catTest","xxx"),"YEAR(?)","catTest.time")
+//                .reduce(SUM, "dogTest.petId", Having.of(GT, 1)).groupBy("catTest.xxx")
+                .resultKeyFunction(ResultKeyAlia.of("dogTest","petIdSum"),"SUM(dogTest.petId)")
+                .groupBy("catTest.xxx")
+                .having(ResultKeyAlia.of("dogTest","petIdSum"), GT,1)
+                .resultKeyFunction(ResultKeyAlia.of("catTest","xxx"),"YEAR(catTest.time)")
                 .sourceScript("FROM catTest INNER JOIN dogTest ON catTest.dogId = dogTest.id")
                 .sort(ro.getOrderBy(),ro.getDirection())
                 .paged().ignoreTotalRows().page(ro.getPage()).rows(ro.getRows());
@@ -261,7 +262,7 @@ public class XxxController {
     }
 
     @RequestMapping("/resultmap/test")
-    public ViewEntity testResultMap() {
+    public ViewEntity testResultMapSimpleSource() {
 
         CriteriaBuilder.ResultMapBuilder builder = CriteriaBuilder.resultMapBuilder();
         builder
@@ -269,9 +270,10 @@ public class XxxController {
                 .reduce(COUNT_DISTINCT, "dogId")
                 .groupBy("id")
         ;
-        builder.and().eq("type", "NL");
+
         builder.sort("id", DESC).paged().page(2).rows(2);
         builder.sourceBuilder().source("catTest");
+//        builder.sourceScript("catTest");
 
         Criteria.ResultMapCriteria ResultMapCriteria = builder.build();
         Page<Map<String, Object>> page = this.petRepository.find(ResultMapCriteria); //un workable
@@ -329,21 +331,21 @@ public class XxxController {
     public ViewEntity createBatch() {
 
         Cat cat = new Cat();
-        cat.setId(506);
+        cat.setId(518);
         cat.setDogId(2);
         cat.setCreateAt(new Date());
         cat.setTestBoo(TestBoo.TEST);
         cat.setList(Arrays.asList(6L, 8L));
-        cat.setTestList(Arrays.asList("BIG CAT", "small cat"));
+        cat.setTestList(Arrays.asList("BIG CATX", "small catX"));
 
 
         Cat cat1 = new Cat();
-        cat1.setId(507);
+        cat1.setId(519);
         cat1.setDogId(2);
         cat1.setCreateAt(new Date());
         cat1.setTestBoo(TestBoo.BOO);
-        cat1.setList(Arrays.asList(1L, 2L));
-        cat1.setTestList(Arrays.asList("THR CAT", "moo cat"));
+        cat1.setList(Arrays.asList(15L, 2L));
+        cat1.setTestList(Arrays.asList("THRa CAT", "moo cat510"));
 
         List<Cat> catList = new ArrayList<>();
         catList.add(cat);

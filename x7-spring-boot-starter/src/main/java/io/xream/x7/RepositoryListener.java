@@ -17,6 +17,8 @@
 package io.xream.x7;
 
 import io.xream.sqli.api.NativeRepository;
+import io.xream.sqli.dialect.Dialect;
+import io.xream.sqli.repository.init.SqlInit;
 import io.xream.sqli.spi.JdbcHelper;
 import io.xream.sqli.spi.L2CacheResolver;
 import io.xream.sqli.spi.L2CacheStorage;
@@ -60,7 +62,7 @@ public class RepositoryListener implements
 
         customizeIdGeneratorPolicy(applicationStartedEvent);
 
-        onJdbcWrapperCreated(applicationStartedEvent);
+        onJdbcHelperCreated(applicationStartedEvent);
         onStarted(applicationStartedEvent);
 
         IdGeneratorBootListener.onStarted(applicationStartedEvent.getApplicationContext());
@@ -69,7 +71,9 @@ public class RepositoryListener implements
 
     private void onStarted(ApplicationStartedEvent applicationStartedEvent){
         NativeRepository nativeRepository = applicationStartedEvent.getApplicationContext().getBean(NativeRepository.class);
-        SqliListener.onStarted(nativeRepository);
+        Dialect dialect = applicationStartedEvent.getApplicationContext().getBean(Dialect.class);
+        SqlInit sqlInit = applicationStartedEvent.getApplicationContext().getBean(SqlInit.class);
+        SqliListener.onStarted(nativeRepository,dialect,sqlInit);
     }
 
     private void customizeLockProvider(ApplicationStartedEvent applicationStartedEvent) {
@@ -153,7 +157,7 @@ public class RepositoryListener implements
 
     }
 
-    private void onJdbcWrapperCreated(ApplicationStartedEvent applicationStartedEvent) {
+    private void onJdbcHelperCreated(ApplicationStartedEvent applicationStartedEvent) {
 
         SqliListener.onBeanCreated(()->{
             JdbcTemplate jdbcTemplate = null;
@@ -215,10 +219,10 @@ public class RepositoryListener implements
         if (customizer == null || customizer.customize() == null)
             return;
 
-        L2CacheResolver levelTwoCacheResolver = applicationStartedEvent.getApplicationContext().getBean(L2CacheResolver.class);
-        if (levelTwoCacheResolver == null)
+        L2CacheResolver l2CacheResolver = applicationStartedEvent.getApplicationContext().getBean(L2CacheResolver.class);
+        if (l2CacheResolver == null)
             return;
-        levelTwoCacheResolver.setL2CacheConsistency(customizer.customize());
+        SqliListener.onL2CacheEnabled(l2CacheResolver, customizer.customize());
     }
 
 
